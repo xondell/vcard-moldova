@@ -1,0 +1,7 @@
+/* Override the prototype's mobile sidebar hiding without redesigning its controls. */
+.toast { position: static; width: auto; margin-bottom: 16px; border-radius: 12px; box-shadow: none; }
+@media (max-width: 600px) {
+  .dashboard-sidebar { display: block; }
+  .dashboard-nav { flex-direction: row; justify-content: space-between; }
+  .dash-nav-item { flex: 1; }
+}

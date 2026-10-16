@@ -1,0 +1,2 @@
+-- Intentionally empty. Do not seed shared passwords or activation secrets.
+-- tests/integration.mjs provisions isolated identities/cards and cleans them up.
