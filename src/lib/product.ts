@@ -15,6 +15,7 @@ export type SocialLinks = {
 }
 
 export type PersonalProfile = {
+  avatarPath?: string
   type: 'personal'
   slug: string
   fullName: string
@@ -29,6 +30,8 @@ export type PersonalProfile = {
 }
 
 export type BusinessProfile = {
+  avatarPath?: string
+  coverPath?: string
   type: 'business'
   slug: string
   name: string
@@ -92,22 +95,6 @@ export const demoBusiness: BusinessProfile = {
     { label: 'Написать в WhatsApp', url: 'https://wa.me/37360555015', icon: 'message' }
   ]
 }
-
-export const profileFromStorage = (): Profile => {
-  try {
-    const raw = localStorage.getItem('vcard_profile')
-    if (raw) return JSON.parse(raw) as Profile
-  } catch {
-    // Fall back to the safe demo record when storage is unavailable.
-  }
-  return demoPersonal
-}
-
-export const saveProfile = (profile: Profile) => {
-  localStorage.setItem('vcard_profile', JSON.stringify(profile))
-}
-
-export const hasDemoUser = () => localStorage.getItem('vcard_user') === 'demo'
 
 export const publicProfileUrl = (profile: Profile) => `${appUrl()}/p/${profile.slug}`
 export const cardUrl = (cardId = 'VC000123') => `${appUrl()}/c/${cardId}`

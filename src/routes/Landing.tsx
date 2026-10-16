@@ -7,10 +7,12 @@ import { demoBusiness, demoPersonal, Locale, t, ProfileType
 } from '../lib/product'
 
 
-import { navigate, localePath as withLocale } from '../lib/navigation'
+import { navigate as navigateTo, localePath as withLocale } from '../lib/navigation'
 import { Logo, Header, Eyebrow, MiniProfileCard } from '../components/Brand'
 type IconType = typeof ArrowRight
+const navigate = navigateTo
 export function Landing({ locale }: { locale: Locale }) {
+  const navigate = (path: string) => navigateTo(path === '/p/boris-colesov' ? `/${locale}/demo/personal` : path === '/p/arina-studio' ? `/${locale}/demo/business` : path)
   const [demoType, setDemoType] = useState<ProfileType>('personal')
   const [faqOpen, setFaqOpen] = useState(0)
   const demo = demoType === 'personal' ? demoPersonal : demoBusiness

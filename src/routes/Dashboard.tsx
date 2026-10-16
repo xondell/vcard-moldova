@@ -1,60 +1,63 @@
 import { useEffect, useState } from 'react'
-import {
-  ArrowRight, ArrowUpRight, Check, ChevronRight,
-  Copy, ExternalLink, Globe2, Link2, MoreHorizontal, QrCode, Radio, Settings, UserRound, X, Zap
-} from 'lucide-react'
-import { cardUrl, displayUrl, Locale, Profile, profileFromStorage,
-  publicProfileUrl, saveProfile, Tab, t
-} from '../lib/product'
+import { ArrowRight, Check, Copy, ExternalLink, Globe2, Radio, Settings, UserRound, X, Zap } from 'lucide-react'
+import { Logo, MiniProfileCard, LanguageSwitcher } from '../components/Brand'
+import { QrPanel, PublicProfile } from '../components/PublicProfile'
+import { t, publicProfileUrl, type Locale, type Tab } from '../lib/product'
+import { localePath, navigate, switchLocale } from '../lib/navigation'
+import { getOwnedProfile, saveOwnedProfile, type OwnedProfile } from '../lib/profiles'
+import { requireSupabase } from '../lib/supabase'
+import { useAuth } from '../features/auth/AuthProvider'
+import { authError } from '../features/auth/validation'
+import { ProfileEditor } from '../features/profiles/ProfileEditor'
 
-
-import { navigate, localePath as withLocale } from '../lib/navigation'
-import { Logo, MiniProfileCard } from '../components/Brand'
-import { QrPanel } from '../components/PublicProfile'
-type IconType = typeof ArrowRight
 export function Dashboard({ locale, initialTab }: { locale: Locale; initialTab: Tab }) {
-  const [profile, setProfile] = useState<Profile>(() => profileFromStorage())
-  const [published, setPublished] = useState(() => localStorage.getItem('vcard_published') !== 'false')
-  const [active, setActive] = useState<Tab>(initialTab)
-  const [toast, setToast] = useState('')
-  useEffect(() => setActive(initialTab), [initialTab])
-  const setTab = (tab: Tab) => { setActive(tab); navigate(withLocale(locale, `/dashboard${tab === 'overview' ? '' : `/${tab}`}`)) }
-  const save = () => { saveProfile(profile); setToast(t(locale, 'saved')); setTimeout(() => setToast(''), 2300) }
-  const setPublishedAndPersist = () => { const next = !published; setPublished(next); localStorage.setItem('vcard_published', String(next)); setToast(next ? t(locale, 'published') : t(locale, 'draft')); setTimeout(() => setToast(''), 2300) }
-  const update = (key: string, value: string) => setProfile(previous => ({ ...previous, [key]: value } as Profile))
-  const profileUrl = publicProfileUrl(profile)
-  return <div className="dashboard-page"><aside className="dashboard-sidebar"><Logo /><div className="sidebar-profile"><div className={`avatar ${profile.type === 'business' ? 'avatar-gold' : 'avatar-indigo'}`}>{profile.type === 'business' ? 'A' : 'БК'}</div><div><strong>{profile.type === 'personal' ? profile.fullName : profile.name}</strong><small>{profile.type === 'personal' ? t(locale, 'personalType') : t(locale, 'businessType')}</small></div></div><nav className="dashboard-nav"><span className="nav-section-label">{locale === 'ru' ? 'Кабинет' : 'Panou'}</span><DashNav active={active === 'overview'} icon={Zap} label={t(locale, 'overview')} onClick={() => setTab('overview')} /><DashNav active={active === 'profile'} icon={UserRound} label={t(locale, 'editProfile')} onClick={() => setTab('profile')} /><DashNav active={active === 'cards'} icon={Radio} label={t(locale, 'cards')} onClick={() => setTab('cards')} /><span className="nav-section-label nav-label-spaced">{locale === 'ru' ? 'Аккаунт' : 'Cont'}</span><DashNav active={active === 'settings'} icon={Settings} label={t(locale, 'settings')} onClick={() => setTab('settings')} /></nav><div className="sidebar-bottom"><button className="sidebar-locale" onClick={() => navigate(locale === 'ru' ? '/ro/dashboard' : '/ru/dashboard')}><Globe2 size={16} /> {locale === 'ru' ? 'Română' : 'Русский'}<ChevronRight size={15} /></button><button className="sidebar-logout" onClick={() => { localStorage.removeItem('vcard_user'); navigate('/') }}><X size={15} /> {t(locale, 'logout')}</button></div></aside><main className="dashboard-main"><div className="dashboard-topbar"><div className="mobile-dashboard-brand"><Logo /></div><div><span className="dashboard-kicker">{locale === 'ru' ? 'С возвращением,' : 'Bine ai revenit,'}</span><h1>{profile.type === 'personal' ? profile.fullName.split(' ')[0] : profile.name}</h1></div><div className="dashboard-top-actions"><span className="demo-pill"><span className="status-dot" /> {t(locale, 'demoMode')}</span><button className="icon-button" onClick={() => navigate(profileUrl)}><ExternalLink size={18} /></button><div className="avatar avatar-small avatar-indigo">{profile.type === 'business' ? 'A' : 'БК'}</div></div></div><div className="dashboard-content">{active === 'overview' && <DashboardOverview locale={locale} profile={profile} published={published} onTab={setTab} onTogglePublish={setPublishedAndPersist} onToast={setToast} />}{active === 'profile' && <Editor locale={locale} profile={profile} update={update} save={save} published={published} onTogglePublish={setPublishedAndPersist} />}{active === 'cards' && <CardsView locale={locale} profile={profile} onToast={setToast} />}{active === 'settings' && <SettingsView locale={locale} profile={profile} published={published} onLogout={() => { localStorage.removeItem('vcard_user'); navigate('/') }} />}</div>{toast && <div className="toast"><Check size={16} /> {toast}</div>}</main></div>
-}
-
-function DashNav({ active, icon: Icon, label, onClick }: { active: boolean; icon: IconType; label: string; onClick: () => void }) {
-  return <button className={`dash-nav-item ${active ? 'active' : ''}`} onClick={onClick}><Icon size={18} /><span>{label}</span>{active && <ChevronRight size={15} />}</button>
-}
-
-function DashboardOverview({ locale, profile, published, onTab, onTogglePublish, onToast }: { locale: Locale; profile: Profile; published: boolean; onTab: (tab: Tab) => void; onTogglePublish: () => void; onToast: (value: string) => void }) {
+  const { session } = useAuth()
+  const [profile, setProfile] = useState<OwnedProfile | null>(null)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [preview, setPreview] = useState(false)
+  const ro = locale === 'ro'
+  useEffect(() => {
+    let mounted = true
+    getOwnedProfile().then(p => { if (mounted) setProfile(p) }).catch(() => { if (mounted) setError(ro ? 'Profilul nu poate fi încărcat.' : 'Не удалось загрузить профиль.') })
+    return () => { mounted = false }
+  }, [session?.user.id, ro])
+  async function logout() {
+    const { error } = await requireSupabase().auth.signOut()
+    if (error) { setError(authError(error.message, locale)); return }
+    navigate(localePath(locale, '/login'))
+  }
+  async function save(published = profile?.published) {
+    if (!profile || busy) return
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const saved = await saveOwnedProfile(profile, published)
+      setProfile(saved); setNotice(t(locale, 'saved'))
+    } catch (err) {
+      const code = (err as { code?: string }).code
+      setError(code === '23505' ? (ro ? 'Acest URL este deja folosit.' : 'Этот адрес уже занят.') : (ro ? 'Nu s-a salvat. Verifică numele, URL-urile (https://) și conexiunea.' : 'Не сохранено. Проверьте имя, ссылки (https://) и соединение.'))
+    } finally { setBusy(false) }
+  }
+  if (!profile) return <div className="resolver-page"><div className="resolver-card"><Logo /><p role={error ? 'alert' : 'status'}>{error || (ro ? 'Se încarcă…' : 'Загрузка…')}</p><button className="button button-dark" onClick={logout}>{t(locale, 'logout')}</button></div></div>
+  const name = profile.type === 'personal' ? profile.fullName : profile.name
   const url = publicProfileUrl(profile)
-  return <div className="overview-view"><div className="page-heading-row"><div><span className="dashboard-kicker">OVERVIEW / 01</span><h2>{locale === 'ru' ? 'Ваша цифровая визитка' : 'Cartea ta digitală'}</h2><p>{locale === 'ru' ? 'Управляйте профилем и делитесь им с миром.' : 'Gestionează profilul și distribuie-l lumii.'}</p></div><button className={`publish-toggle ${published ? 'is-published' : ''}`} onClick={onTogglePublish}><span className="toggle-dot" /> {published ? t(locale, 'published') : t(locale, 'draft')}</button></div><div className="overview-grid"><div className="overview-main-card"><div className="overview-card-header"><div><span className="card-label">{profile.type === 'personal' ? 'PERSONAL PROFILE' : 'BUSINESS PROFILE'}</span><h3>{profile.type === 'personal' ? profile.fullName : profile.name}</h3></div><button className="icon-button" onClick={() => onTab('profile')}><MoreHorizontal size={18} /></button></div><div className="overview-profile-preview"><MiniProfileCard profile={profile} compact /></div><div className="overview-card-actions"><button className="button button-dark" onClick={() => onTab('profile')}>{t(locale, 'editProfile')} <ArrowRight size={16} /></button><button className="button button-soft" onClick={() => navigate(`/p/${profile.slug}`)}>{t(locale, 'openProfile')} <ExternalLink size={15} /></button></div></div><div className="overview-side"><div className="dashboard-url-card"><span className="card-label">{t(locale, 'profileUrl')}</span><div className="url-row"><Link2 size={16} /><span>{displayUrl(url)}</span><button onClick={() => { navigator.clipboard?.writeText(url); onToast(t(locale, 'saved')); }}><Copy size={15} /></button></div><div className="url-card-footer"><span><span className="status-dot" /> HTTPS / PUBLIC</span><button onClick={() => navigate(`/p/${profile.slug}`)}><ExternalLink size={14} /> {t(locale, 'viewPublic')}</button></div></div><QrPanel url={url} locale={locale} compact /></div></div><div className="dashboard-insight-row"><div><div className="insight-icon yellow"><Zap size={18} /></div><div><strong>{locale === 'ru' ? 'Профиль готов к встрече' : 'Profilul este gata de întâlnire'}</strong><p>{locale === 'ru' ? 'Добавьте QR-код в подпись или презентацию.' : 'Adaugă codul QR în semnătură sau prezentare.'}</p></div></div><button className="text-button" onClick={() => onTab('cards')}>{t(locale, 'cards')} <ArrowRight size={15} /></button></div></div>
-}
-
-function Editor({ locale, profile, update, save, published, onTogglePublish }: { locale: Locale; profile: Profile; update: (key: string, value: string) => void; save: () => void; published: boolean; onTogglePublish: () => void }) {
-  const isPersonal = profile.type === 'personal'
-  return <div className="editor-view"><div className="page-heading-row"><div><span className="dashboard-kicker">EDIT PROFILE / 02</span><h2>{t(locale, 'editProfile')}</h2><p>{t(locale, 'editorHint')}</p></div><div className="editor-actions"><button className="button button-soft" onClick={onTogglePublish}>{published ? t(locale, 'unpublish') : t(locale, 'publish')}</button><button className="button button-dark" onClick={save}>{t(locale, 'save')} <Check size={16} /></button></div></div><div className="editor-grid"><div className="form-card"><div className="form-card-header"><span>{isPersonal ? 'PERSONAL DETAILS' : 'BUSINESS DETAILS'}</span><span className="step-counter">01 / 02</span></div><div className="avatar-upload"><div className={`avatar avatar-large ${isPersonal ? 'avatar-indigo' : 'avatar-gold'}`}>{isPersonal ? 'БК' : 'A'}</div><div><strong>{isPersonal ? t(locale, 'fullName') : t(locale, 'businessName')}</strong><button>{locale === 'ru' ? 'Изменить изображение' : 'Schimbă imaginea'} <ArrowUpRight size={13} /></button></div></div>{isPersonal ? <><Field label={t(locale, 'fullName')} value={profile.fullName} onChange={value => update('fullName', value)} /><Field label={t(locale, 'title')} value={profile.title} onChange={value => update('title', value)} /><Field label={t(locale, 'company')} value={profile.company} onChange={value => update('company', value)} /><Field label={t(locale, 'bio')} value={profile.bio} onChange={value => update('bio', value)} textarea /><div className="form-two"><Field label={t(locale, 'phone')} value={profile.phone} onChange={value => update('phone', value)} /><Field label={t(locale, 'email')} value={profile.email} onChange={value => update('email', value)} /></div><div className="form-two"><Field label={t(locale, 'website')} value={profile.website} onChange={value => update('website', value)} /><Field label={t(locale, 'location')} value={profile.location} onChange={value => update('location', value)} /></div></> : <><Field label={t(locale, 'businessName')} value={profile.name} onChange={value => update('name', value)} /><Field label={t(locale, 'category')} value={profile.category} onChange={value => update('category', value)} /><Field label={t(locale, 'description')} value={profile.description} onChange={value => update('description', value)} textarea /><div className="form-two"><Field label={t(locale, 'phone')} value={profile.phone} onChange={value => update('phone', value)} /><Field label={t(locale, 'email')} value={profile.email} onChange={value => update('email', value)} /></div><Field label={t(locale, 'address')} value={profile.address} onChange={value => update('address', value)} /><Field label={t(locale, 'website')} value={profile.website} onChange={value => update('website', value)} /></>}</div><div className="editor-preview"><span className="preview-label">LIVE PREVIEW</span><MiniProfileCard profile={profile} /></div></div></div>
-}
-
-function Field({ label, value, onChange, textarea = false }: { label: string; value: string; onChange: (value: string) => void; textarea?: boolean }) {
-  return <label className="field-label-wrap"><span>{label}</span>{textarea ? <textarea value={value} onChange={e => onChange(e.target.value)} rows={3} /> : <input value={value} onChange={e => onChange(e.target.value)} />}</label>
-}
-
-function CardsView({ locale, onToast }: { locale: Locale; profile: Profile; onToast: (value: string) => void }) {
-  const [activation, setActivation] = useState('')
-  const [active, setActive] = useState(false)
-  const url = cardUrl('VC000123')
-  return <div className="cards-view"><div className="page-heading-row"><div><span className="dashboard-kicker">MY CARDS / 03</span><h2>{t(locale, 'cards')}</h2><p>{locale === 'ru' ? 'Постоянные ссылки для физических карт VCard.' : 'Linkuri permanente pentru cardurile fizice VCard.'}</p></div><span className="card-count">01 CARD</span></div><div className="cards-grid"><div className="physical-card-record"><div className="physical-card-visual"><div className="nfc-card small"><div className="nfc-chip" /><div className="nfc-wave"><span /><span /><span /></div><div className="nfc-word">VCard</div><div className="nfc-id">VC / 000123</div></div></div><div className="physical-card-info"><div><span className="card-label">{t(locale, 'cardId')}</span><strong>VC000123</strong></div><div><span className="card-label">STATUS</span><strong className={active ? 'text-success' : ''}>{active ? t(locale, 'active') : t(locale, 'unassigned')}</strong></div><div><span className="card-label">PUBLIC URL</span><strong>{displayUrl(url)}</strong></div><div className="card-record-actions"><button onClick={() => { navigator.clipboard?.writeText(url); onToast(t(locale, 'saved')) }}><Copy size={15} /> {t(locale, 'copyLink')}</button><button onClick={() => navigate('/c/VC000123')}><QrCode size={15} /> {locale === 'ru' ? 'Открыть URL' : 'Deschide URL'}</button></div></div></div><QrPanel url={url} locale={locale} compact /><div className="activation-card"><div className="activation-header"><div className="insight-icon yellow"><Radio size={17} /></div><div><h3>{t(locale, 'addCard')}</h3><p>{locale === 'ru' ? 'Введите одноразовый код с упаковки карты.' : 'Introdu codul unic de pe ambalajul cardului.'}</p></div></div><div className="activation-form"><input value={activation} onChange={e => setActivation(e.target.value)} placeholder="VCARD-XXXX-XXXX" /><button className="button button-dark" onClick={() => { if (activation.trim()) { setActive(true); onToast(t(locale, 'saved')) } }}>{t(locale, 'activate')} <ArrowRight size={16} /></button></div><span className="security-note"><Check size={14} /> {locale === 'ru' ? 'Код используется один раз и не показывается публично.' : 'Codul este de unică folosință și nu este public.'}</span></div></div></div>
-}
-
-function SettingsView({ locale, profile, published, onLogout }: { locale: Locale; profile: Profile; published: boolean; onLogout: () => void }) {
-  return <div className="settings-view"><div className="page-heading-row"><div><span className="dashboard-kicker">SETTINGS / 04</span><h2>{t(locale, 'settings')}</h2><p>{locale === 'ru' ? 'Основные параметры аккаунта и профиля.' : 'Parametrii principali ai contului și profilului.'}</p></div></div><div className="settings-card"><SettingRow label={t(locale, 'email')} value="demo@vcard.md" /><SettingRow label={t(locale, 'profileType')} value={profile.type === 'personal' ? t(locale, 'personalType') : t(locale, 'businessType')} /><SettingRow label={t(locale, 'profileUrl')} value={displayUrl(publicProfileUrl(profile))} /><SettingRow label={t(locale, 'status')} value={published ? t(locale, 'published') : t(locale, 'draft')} /><div className="settings-danger"><div><strong>{t(locale, 'logout')}</strong><p>{locale === 'ru' ? 'Завершить локальную демонстрационную сессию.' : 'Încheie sesiunea demo locală.'}</p></div><button className="button button-soft" onClick={onLogout}>{t(locale, 'logout')}</button></div></div></div>
-}
-
-function SettingRow({ label, value }: { label: string; value: string }) {
-  return <div className="setting-row"><span>{label}</span><strong>{value}</strong><ChevronRight size={16} /></div>
+  const setTab = (tab: Tab) => navigate(localePath(locale, `/dashboard${tab === 'overview' ? '' : `/${tab}`}`))
+  const update = (key: string, value: unknown) => { setNotice(''); setProfile(previous => previous ? { ...previous, [key]: value } as OwnedProfile : null) }
+  async function copy() {
+    try { await navigator.clipboard.writeText(url); setNotice(ro ? 'Link copiat' : 'Ссылка скопирована') }
+    catch { setError(ro ? 'Copiază manual linkul afișat.' : 'Скопируйте показанную ссылку вручную.') }
+  }
+  return <div className="dashboard-page"><aside className="dashboard-sidebar"><Logo /><div className="sidebar-profile"><div className="avatar avatar-indigo">{name.slice(0, 2).toUpperCase() || 'VC'}</div><div><strong>{name || (ro ? 'Profil nou' : 'Новый профиль')}</strong><small>{t(locale, profile.type === 'personal' ? 'personalType' : 'businessType')}</small></div></div><nav className="dashboard-nav">{([
+    ['overview', Zap, 'overview'], ['profile', UserRound, 'editProfile'], ['cards', Radio, 'cards'], ['settings', Settings, 'settings'],
+  ] as const).map(([tab, Icon, label]) => <button key={tab} className={`dash-nav-item ${initialTab === tab ? 'active' : ''}`} onClick={() => setTab(tab)}><Icon size={18} /><span>{t(locale, label)}</span></button>)}</nav><div className="sidebar-bottom"><button className="sidebar-locale" onClick={() => navigate(switchLocale(window.location.pathname, '', ro ? 'ru' : 'ro'))}><Globe2 size={16} />{ro ? 'Русский' : 'Română'}</button><button className="sidebar-logout" onClick={logout}><X size={15} />{t(locale, 'logout')}</button></div></aside>
+    <main className="dashboard-main"><div className="dashboard-topbar"><div className="mobile-dashboard-brand"><Logo /></div><div><span className="dashboard-kicker">VCard Moldova</span><h1>{name || t(locale, 'dashboard')}</h1></div><LanguageSwitcher locale={locale} /></div>
+      <div className="dashboard-content">{error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="toast" role="status">{notice}</p>}
+        {initialTab === 'overview' && <div className="overview-view"><div className="page-heading-row"><div><h2>{ro ? 'Cartea ta digitală' : 'Ваша цифровая визитка'}</h2><p>{ro ? 'Salvează, publică și distribuie profilul.' : 'Сохраните, опубликуйте и поделитесь профилем.'}</p></div><button disabled={busy} className={`publish-toggle ${profile.published ? 'is-published' : ''}`} onClick={() => save(!profile.published)}>{t(locale, profile.published ? 'published' : 'draft')}</button></div><div className="overview-grid"><div className="overview-main-card"><div className="overview-card-header"><h3>{name}</h3></div><div className="overview-profile-preview"><MiniProfileCard profile={profile} compact /></div><div className="overview-card-actions"><button className="button button-dark" onClick={() => setTab('profile')}>{t(locale, 'editProfile')}<ArrowRight size={16} /></button><button className="button button-soft" onClick={() => setPreview(true)}>{ro ? 'Previzualizare' : 'Предпросмотр'}</button></div></div><div className="overview-side"><div className="dashboard-url-card"><span className="card-label">{t(locale, 'profileUrl')}</span><div className="url-row"><span>{url}</span><button aria-label={t(locale, 'copyLink')} onClick={copy}><Copy size={16} /></button></div><a href={url} target="_blank" rel="noreferrer">{t(locale, 'viewPublic')}<ExternalLink size={14} /></a><p>{t(locale, profile.published ? 'published' : 'draft')}</p></div><QrPanel url={url} locale={locale} compact /></div></div></div>}
+        {initialTab === 'profile' && <><div className="page-heading-row"><div><h2>{t(locale, 'editProfile')}</h2><p>{t(locale, 'editorHint')}</p></div><div className="editor-actions"><button disabled={busy} className="button button-soft" onClick={() => save(!profile.published)}>{t(locale, profile.published ? 'unpublish' : 'publish')}</button><button disabled={busy} className="button button-dark" onClick={() => save()}>{busy ? '…' : t(locale, 'save')}<Check size={16} /></button><button className="button button-soft" onClick={() => setPreview(true)}>{ro ? 'Previzualizare' : 'Предпросмотр'}</button></div></div><ProfileEditor locale={locale} profile={profile} update={update} /></>}
+        {initialTab === 'cards' && <div className="form-card"><h2>{t(locale, 'cards')}</h2><p>{ro ? 'Activarea NFC va fi disponibilă după migrarea M3.' : 'Активация NFC будет доступна после миграции M3.'}</p></div>}
+        {initialTab === 'settings' && <div className="settings-card"><h2>{t(locale, 'settings')}</h2><div className="setting-row"><span>Email</span><strong>{session?.user.email}</strong></div><div className="setting-row"><span>{t(locale, 'profileType')}</span><strong>{t(locale, profile.type === 'personal' ? 'personalType' : 'businessType')}</strong></div><div className="setting-row"><span>{t(locale, 'status')}</span><strong>{t(locale, profile.published ? 'published' : 'draft')}</strong></div><button className="button button-soft" onClick={() => navigate(localePath(locale, '/forgot-password'))}>{ro ? 'Schimbă parola' : 'Изменить пароль'}</button><button className="button button-dark" onClick={logout}>{t(locale, 'logout')}</button></div>}
+      </div>
+    </main>{preview && <div className="profile-preview-dialog" role="dialog" aria-modal="true" aria-label={ro ? 'Previzualizare' : 'Предпросмотр'}><button className="button button-yellow preview-close" onClick={() => setPreview(false)}><X />{ro ? 'Închide' : 'Закрыть'}</button><PublicProfile locale={locale} profile={profile} /></div>}
+  </div>
 }
