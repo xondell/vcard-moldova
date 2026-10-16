@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client'
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, useParams, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './features/auth/AuthProvider'
 import { isSupabaseConfigured } from './lib/supabase'
@@ -12,10 +13,12 @@ import { Logo } from './components/Brand'
 import { demoPersonal, demoBusiness, type Tab } from './lib/product'
 import { localeFromLocation } from './lib/navigation'
 import './styles.css'
+import './responsive.css'
 
 function AppRoutes() {
   const location = useLocation()
   const locale = localeFromLocation(location.pathname, location.search)
+  useEffect(() => { document.documentElement.lang = locale }, [locale])
   return <Routes>
     <Route path="/" element={<Landing locale={locale} />} />
     <Route path="/:locale" element={<LocaleLanding />} />

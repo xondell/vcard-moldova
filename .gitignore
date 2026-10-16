@@ -10,3 +10,6 @@ vite.config.d.ts
 test-results/
 playwright-report/
 .superpowers/
+*.log
+.vercel
+.env*

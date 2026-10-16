@@ -45,3 +45,4 @@ button:disabled { cursor: wait; opacity: .55; }
   .avatar-upload { flex-wrap: wrap; }
   .setting-row { flex-wrap: wrap; gap: 8px; }
 }
+.editor-fields { border: 0; padding: 0; margin: 0; min-width: 0; }

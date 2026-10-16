@@ -5,11 +5,15 @@ export function ProfileImage({ path = '', name, className = '', cover = false }:
   const [src, setSrc] = useState('')
   useEffect(() => {
     let active = true
+    let currentUrl = ''
     setSrc('')
-    const refresh = () => { if (path) mediaUrl(path).then(value => { if (active) setSrc(value) }).catch(() => { if (active) setSrc('') }) }
+    const refresh = () => { if (path) mediaUrl(path).then(value => {
+      if (currentUrl) URL.revokeObjectURL(currentUrl)
+      if (active) { currentUrl = value; setSrc(value) } else URL.revokeObjectURL(value)
+    }).catch(() => { if (active) { if (currentUrl) URL.revokeObjectURL(currentUrl); setSrc('') } }) }
     refresh()
     const interval = window.setInterval(refresh, 45000)
-    return () => { active = false; window.clearInterval(interval) }
+    return () => { active = false; window.clearInterval(interval); if (currentUrl) URL.revokeObjectURL(currentUrl) }
   }, [path])
   return <div className={`${className} profile-image ${cover ? 'profile-cover-image' : ''}`}>{src ? <img src={src} alt={name} onError={() => setSrc('')} /> : cover ? null : initials(name)}</div>
 }

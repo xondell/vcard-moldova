@@ -6,5 +6,5 @@ export default ts.config(
   js.configs.recommended,
   ...ts.configs.recommended,
   { files: ['**/*.{ts,tsx}'], plugins: { 'unused-imports': unusedImports }, rules: { 'unused-imports/no-unused-imports': 'error', '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }] } },
-  { files: ['**/*.mjs'], languageOptions: { globals: { process: 'readonly', console: 'readonly', Buffer: 'readonly', URL: 'readonly' } } },
+  { files: ['**/*.mjs'], languageOptions: { globals: { process: 'readonly', console: 'readonly', Buffer: 'readonly', URL: 'readonly', fetch: 'readonly', document: 'readonly', window: 'readonly' } } },
 )

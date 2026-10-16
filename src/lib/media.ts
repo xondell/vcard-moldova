@@ -19,14 +19,15 @@ export async function uploadImage(file: File, profileId: string): Promise<string
   const client = requireSupabase()
   const { data: { user }, error: authError } = await client.auth.getUser()
   if (authError || !user) throw new Error('unauthorized')
-  const path = `${user.id}/${profileId}/${crypto.randomUUID()}.webp`
-  const { error } = await client.storage.from('profile-media').upload(path, blob, { contentType: 'image/webp', upsert: false, cacheControl: '60' })
+  if (!profileId) throw new Error('profile_not_found')
+  const path = `${crypto.randomUUID()}.webp`
+  const { error } = await client.storage.from('profile-media').upload(path, blob, { contentType: 'image/webp', upsert: false, cacheControl: '0' })
   if (error) throw error
   return path
 }
 export async function mediaUrl(path: string): Promise<string> {
   if (!path) return ''
-  const { data, error } = await requireSupabase().storage.from('profile-media').createSignedUrl(path, 60)
+  const { data, error } = await requireSupabase().storage.from('profile-media').download(path)
   if (error) throw error
-  return data.signedUrl
+  return URL.createObjectURL(data)
 }
