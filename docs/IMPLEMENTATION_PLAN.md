@@ -18,7 +18,7 @@
 
 ## Tasks / progress ledger
 - [x] M0: pinned dependencies; added lint/typecheck/test tooling and route tests; extracted landing/shared/public/dashboard/auth modules; routing/locales/404 and Vercel rewrites. npm test (3), lint, typecheck, build passed. Temporary prototype auth/data remain only until M1/M2; not represented as secure.
-- [ ] M1: add failing auth/database integration cases; typed Supabase configuration, AuthProvider, real login/signup/logout/recovery and guard; migrations for relational profile/detail/card/code tables and RLS. Verify build, unit and local DB tests; commit.
+- [x] M1 foundation: real login/signup/recovery/session provider and guard; relational tables with RLS and profile creation trigger. Unit tests (7), lint, typecheck, build passed. Local DB integration pending stack download; dashboard persistence/logout replaced in M2 before release.
 - [ ] M2: test draft visibility, cross-user writes and persisted edits; add profile CRUD RPC/data adapters and asynchronous dashboard/public routes; stable slug, publish, previews and QR URLs. Verify tests/build; commit.
 - [ ] M3: test valid/invalid/reused/racing activation and card states; add secure provisioning, atomic rate-limited RPC, resolver and actual card list. Verify tests/build; commit.
 - [ ] M4: test link/VCF/upload validation; complete editor fields, owner-scoped image uploads, real avatars/cover, action/social/hours editing, RU/RO and mobile polish. Verify tests/build; commit.
