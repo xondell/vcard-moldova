@@ -6,6 +6,7 @@ import { Landing } from './routes/Landing'
 import { AuthView } from './routes/Auth'
 import { Dashboard } from './routes/Dashboard'
 import { PublicRoute } from './routes/Public'
+import { CardResolver } from './routes/CardResolver'
 import { PublicProfile } from './components/PublicProfile'
 import { Logo } from './components/Brand'
 import { demoPersonal, demoBusiness, type Tab } from './lib/product'
@@ -25,6 +26,7 @@ function AppRoutes() {
     <Route path="/:locale/dashboard/:tab?" element={<DashboardRoute />} />
     <Route path="/:locale/demo/:type?" element={<DemoRoute />} />
     <Route path="/p/:slug" element={<PublicRoute locale={locale} />} />
+    <Route path="/c/:cardId" element={<CardResolver locale={locale} />} />
     <Route path="*" element={<NotFound locale={locale} />} />
   </Routes>
 }

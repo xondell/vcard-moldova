@@ -44,8 +44,8 @@ export function AuthView({ locale, mode }: { locale: Locale; mode: Mode }) {
           if (activation.trim()) {
             const { data: profile } = await client.from('profiles').select('id').single()
             if (profile) {
-              const { error: activationError } = await client.rpc('activate_card', { activation_code: activation.trim(), target_profile: profile.id })
-              if (activationError) { setMessage(ro ? 'Cont creat. Activează cardul din panou.' : 'Аккаунт создан. Активируйте карту в кабинете.'); navigate(localePath(locale, '/dashboard/cards')); return }
+              const { data: activationResult, error: activationError } = await client.rpc('activate_card', { activation_code: activation.trim(), target_profile: profile.id })
+              if (activationError || activationResult?.error) { setMessage(ro ? 'Cont creat. Activează cardul din panou.' : 'Аккаунт создан. Активируйте карту в кабинете.'); navigate(localePath(locale, '/dashboard/cards')); return }
             }
           }
           navigate(localePath(locale, '/dashboard'))
