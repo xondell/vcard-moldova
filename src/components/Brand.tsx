@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { ArrowUpRight, AtSign, BriefcaseBusiness, CalendarDays, Mail,
   MapPin, Menu, MoreHorizontal, Phone, Send, X
 } from 'lucide-react'
-import { displayUrl, Locale, Profile, t
+import { displayUrl, publicProfileUrl, Locale, Profile, t
 } from '../lib/product'
 
 
 import { navigate, localePath as withLocale, switchLocale } from '../lib/navigation'
+import { ProfileImage } from './ProfileImage'
 const navLinks: { key: 'navHome' | 'navFeatures' | 'navHow' | 'navExamples' | 'navFaq'; href: string }[] = [
   { key: 'navHome', href: '#top' }, { key: 'navFeatures', href: '#features' }, { key: 'navHow', href: '#how' },
   { key: 'navExamples', href: '#examples' }, { key: 'navFaq', href: '#faq' }
@@ -50,18 +51,17 @@ export function MiniProfileCard({ profile, compact = false }: { profile: Profile
   return <div className={`mini-card ${isPersonal ? 'mini-personal' : 'mini-business'} ${compact ? 'mini-compact' : ''}`}>
     <div className="mini-card-top"><span className="mini-label">{isPersonal ? 'PERSONAL / VCARD' : 'BUSINESS / VCARD'}</span><MoreHorizontal size={17} /></div>
     {isPersonal ? <>
-      <div className="avatar avatar-large avatar-indigo">БК</div>
+      <ProfileImage path={profile.avatarPath} name={profile.fullName} className="avatar avatar-large avatar-indigo" />
       <h3>{profile.fullName}</h3><p className="mini-role">{profile.title} <span>·</span> {profile.company}</p>
       <p className="mini-bio">{profile.bio}</p>
       <div className="mini-actions"><span><Phone size={14} /> {profile.phone}</span><span><Mail size={14} /> {profile.email}</span></div>
       <div className="mini-socials"><AtSign size={15} /><Send size={15} /><BriefcaseBusiness size={15} /><span className="mini-link">{displayUrl(profile.website)}</span></div>
     </> : <>
-      <div className="business-cover"><div className="business-logo">A</div><span className="cover-pill">OPEN TODAY</span></div>
+      <div className="business-cover">{profile.coverPath && <ProfileImage path={profile.coverPath} name={profile.name} className="mini-cover-photo" cover />}<ProfileImage path={profile.avatarPath} name={profile.name} className="business-logo" /></div>
       <h3>{profile.name}</h3><p className="mini-role">{profile.category}</p><p className="mini-bio">{profile.description}</p>
       <div className="mini-actions"><span><MapPin size={14} /> {profile.address}</span><span><CalendarDays size={14} /> {profile.hours[0]}</span></div>
-      <div className="mini-business-actions"><span>Book appointment <ArrowUpRight size={13} /></span><span>Open menu <ArrowUpRight size={13} /></span></div>
+      <div className="mini-business-actions">{profile.actions.slice(0, 2).map((action,i) => <span key={i}>{action.label} <ArrowUpRight size={13} /></span>)}</div>
     </>}
-    <div className="mini-card-footer"><span>vcard.md/p/{profile.slug}</span><span className="status-dot" /></div>
+    <div className="mini-card-footer"><span>{displayUrl(publicProfileUrl(profile))}</span><span className="status-dot" /></div>
   </div>
 }
-

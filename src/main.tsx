@@ -45,7 +45,7 @@ function DashboardRoute() {
 }
 function DemoRoute() {
   const { locale, type } = useParams()
-  return <PublicProfile locale={locale === 'ro' ? 'ro' : 'ru'} profile={type === 'business' ? demoBusiness : demoPersonal} />
+  return <PublicProfile locale={locale === 'ro' ? 'ro' : 'ru'} profile={type === 'business' ? demoBusiness : demoPersonal} demo />
 }
 export function NotFound({ locale }: { locale: 'ru' | 'ro' }) {
   return <div className="resolver-page"><div className="resolver-card"><Logo /><h1>404</h1><p>{locale === 'ru' ? 'Страница не найдена или не опубликована.' : 'Pagina nu a fost găsită sau nu este publicată.'}</p><a className="button button-dark" href={`/${locale}`}>{locale === 'ru' ? 'На главную' : 'Acasă'}</a></div></div>

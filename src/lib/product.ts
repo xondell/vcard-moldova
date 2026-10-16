@@ -108,34 +108,37 @@ export const normalizeSlug = (value: string) => value
   .replace(/^-+|-+$/g, '')
   .slice(0, 48)
 
-export const isSafeUrl = (value: string) => {
-  if (!value) return false
+export const normalizeWebUrl = (value: string): string => {
+  // eslint-disable-next-line no-control-regex -- reject control characters before URL parsing removes them
+  if (!value || /[\s\u0000-\u001f\u007f]/.test(value) || value.startsWith('//')) return ''
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value) && !/^https?:\/\//i.test(value)) return ''
   try {
     const parsed = new URL(value.includes('://') ? value : `https://${value}`)
-    return ['https:', 'http:', 'mailto:', 'tel:'].includes(parsed.protocol)
+    return ['https:', 'http:'].includes(parsed.protocol) && parsed.hostname && !parsed.username && !parsed.password ? parsed.href : ''
   } catch {
-    return false
+    return ''
   }
 }
+export const isSafeUrl = (value: string) => Boolean(normalizeWebUrl(value))
+export const initials = (name: string) => name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(n => [...n][0]).join('').toUpperCase() || 'VC'
 
 export const displayUrl = (value: string) => value
-  .replace(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/, 'vcard.md')
-  .replace(/^https?:\/\/[^/]+\.manus\.computer/, 'vcard.md')
   .replace(/^https?:\/\//, '')
   .replace(/\/$/, '')
 
 export const socialItems = (socials: SocialLinks) => Object.entries(socials).filter(([, value]) => Boolean(value)) as [keyof SocialLinks, string][]
 
+const vcfEscape = (value: string) => value.replace(/\\/g, '\\\\').replace(/\r\n|\r|\n/g, '\\n').replace(/([,;])/g, '\\$1')
 export const createVCard = (profile: PersonalProfile) => [
   'BEGIN:VCARD',
   'VERSION:3.0',
-  `FN:${profile.fullName.replace(/([,;\\])/g, '\\$1')}`,
-  `TITLE:${profile.title.replace(/([,;\\])/g, '\\$1')}`,
-  profile.company ? `ORG:${profile.company.replace(/([,;\\])/g, '\\$1')}` : '',
-  profile.phone ? `TEL;TYPE=CELL:${profile.phone}` : '',
-  profile.email ? `EMAIL;TYPE=INTERNET:${profile.email}` : '',
-  profile.website ? `URL:${profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}` : '',
-  profile.location ? `ADR;TYPE=WORK:;;${profile.location.replace(/([,;\\])/g, '\\$1')}` : '',
+  `FN:${vcfEscape(profile.fullName)}`,
+  `TITLE:${vcfEscape(profile.title)}`,
+  profile.company ? `ORG:${vcfEscape(profile.company)}` : '',
+  profile.phone ? `TEL;TYPE=CELL:${vcfEscape(profile.phone)}` : '',
+  profile.email ? `EMAIL;TYPE=INTERNET:${vcfEscape(profile.email)}` : '',
+  isSafeUrl(profile.website) ? `URL:${vcfEscape(normalizeWebUrl(profile.website))}` : '',
+  profile.location ? `ADR;TYPE=WORK:;;${vcfEscape(profile.location)}` : '',
   'END:VCARD'
 ].filter(Boolean).join('\r\n')
 
