@@ -1,5 +1,7 @@
 # VCard Moldova — Delivery Checklist
 
+> Historical prototype checklist, retained for context. Superseded by `docs/IMPLEMENTATION_PLAN.md`, `HANDOFF.md` and `REMAINING_WORK.md`. Fake/demo persistence and Manus hosting requirements below no longer apply.
+
 ## Landing and brand
 - [ ] Landing page includes branded header, Home / Features / How it works / Examples / FAQ navigation, login and create-card CTAs, RU/RO switcher, and mobile navigation.
 - [ ] Hero communicates “Твоя визитка. Твои правила.” with supporting copy, primary and secondary CTAs, and an implemented profile-card preview.

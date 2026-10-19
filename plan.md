@@ -1,5 +1,7 @@
 # VCard Moldova — Implementation Plan
 
+> Historical prototype plan. Current implementation uses real Supabase, React Router and independent Vercel hosting; see `docs/MVP_SPEC.md`, `docs/IMPLEMENTATION_PLAN.md` and `HANDOFF.md`. The localStorage/Manus behavior described below is no longer used.
+
 ## Scope
 Build a commercial-feeling MVP for VCard Moldova: a mobile-first digital business card product with personal/business demos, Russian/Romanian UI, public profile routes, QR and vCard actions, and an auth-ready dashboard shell. The first delivery prioritizes verified user flows that work without external credentials while keeping the Supabase seams clear for production wiring.
 
