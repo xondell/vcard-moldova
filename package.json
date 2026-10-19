@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:integration": "node --env-file=.env.integration tests/integration.mjs",
     "test:e2e": "playwright test",
-    "provision:card": "node --env-file=.env.operator scripts/provision-card.mjs"
+    "provision:card": "node --env-file=.env.operator scripts/provision-card.mjs",
+    "test:mobile": "playwright test --config playwright.mobile.config.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",

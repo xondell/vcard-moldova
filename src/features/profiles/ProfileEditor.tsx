@@ -1,10 +1,10 @@
 import type { OwnedProfile } from '../../lib/profiles'
-import { useState, type ChangeEvent } from 'react'
+import { useState, type ChangeEvent, type HTMLInputTypeAttribute } from 'react'
 import { t, normalizeWebUrl, type Locale, type SocialLinks } from '../../lib/product'
 import { uploadImage } from '../../lib/media'
 import { ProfileImage } from '../../components/ProfileImage'
-export function Field({ label, value, onChange, multiline = false, placeholder, url = false }: { label: string; value: string; onChange: (value: string) => void; multiline?: boolean; placeholder?: string; url?: boolean }) {
-  return <label className="field-label-wrap"><span>{label}</span>{multiline ? <textarea value={value} onChange={e => onChange(e.target.value)} rows={3} maxLength={2048} /> : <input value={value} onChange={e => onChange(e.target.value)} onBlur={() => { if (url && value && normalizeWebUrl(value)) onChange(normalizeWebUrl(value)) }} placeholder={placeholder} maxLength={2048} />}</label>
+export function Field({ label, value, onChange, multiline = false, placeholder, url = false, type = 'text' }: { label: string; value: string; onChange: (value: string) => void; multiline?: boolean; placeholder?: string; url?: boolean; type?: HTMLInputTypeAttribute }) {
+  return <label className="field-label-wrap"><span>{label}</span>{multiline ? <textarea value={value} onChange={e => onChange(e.target.value)} rows={3} maxLength={2048} /> : <input type={type} inputMode={url ? 'url' : undefined} autoCapitalize={url || type === 'email' ? 'none' : undefined} spellCheck={url || type === 'email' ? false : undefined} value={value} onChange={e => onChange(e.target.value)} onBlur={() => { if (url && value && normalizeWebUrl(value)) onChange(normalizeWebUrl(value)) }} placeholder={placeholder} maxLength={2048} />}</label>
 }
 export function ProfileEditor({ locale, profile, update, disabled = false, onUploadBusyChange }: { locale: Locale; profile: OwnedProfile; update: (key: string, value: unknown) => void; disabled?: boolean; onUploadBusyChange?: (busy: boolean) => void }) {
   const ro = locale === 'ro'
@@ -38,8 +38,8 @@ export function ProfileEditor({ locale, profile, update, disabled = false, onUpl
       <Field label={t(locale, 'description')} value={profile.description} onChange={v => update('description', v)} multiline />
       <Field label={t(locale, 'address')} value={profile.address} onChange={v => update('address', v)} />
     </>}
-    <Field label={t(locale, 'phone')} value={profile.phone} onChange={v => update('phone', v)} />
-    <Field label={t(locale, 'email')} value={profile.email} onChange={v => update('email', v)} />
+    <Field label={t(locale, 'phone')} type="tel" value={profile.phone} onChange={v => update('phone', v)} />
+    <Field label={t(locale, 'email')} type="email" value={profile.email} onChange={v => update('email', v)} />
     <Field label={t(locale, 'website')} value={profile.website} placeholder="https://example.md" onChange={v => update('website', v)} url />
   </div><div className="form-card"><h3>{ro ? 'Rețele sociale și linkuri' : 'Социальные сети и ссылки'}</h3>
     {(['instagram','telegram','linkedin','facebook','tiktok','whatsapp'] as (keyof SocialLinks)[]).map(key => <Field key={key} label={key === 'whatsapp' ? 'WhatsApp (https://wa.me/373...)' : key[0].toUpperCase() + key.slice(1)} value={profile.socials[key] || ''} placeholder="https://" url onChange={value => update('socials', { ...profile.socials, [key]: value })} />)}
