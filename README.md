@@ -33,3 +33,19 @@ Create the initial administrator through Supabase Auth Admin API with an operato
 ## Verification
 
 `npm run build` checks TypeScript and creates the production build. `TEST_ADMIN_PASSWORD=... BASE_URL=http://localhost:4317 npm run test:e2e` runs browser coverage; start the server on the matching port first. The authenticated scenario creates temporary accounts/cards, verifies activation and public visibility from separate browser contexts, and exercises disabling, deletion, generated numbering, code replacement, authorization, logout and re-login. Use a staging database for routine test runs. The initial three card codes are never consumed by tests.
+
+## Architecture and source guide
+
+| Area | Source |
+|---|---|
+| Customer interface and profile flow | [src/main.tsx](src/main.tsx) |
+| Administrator interface | [src/Admin.tsx](src/Admin.tsx) |
+| Browser API client | [src/lib/api.ts](src/lib/api.ts) |
+| Application API and local HTTP server | [server/index.mjs](server/index.mjs) |
+| Vercel API entry point | [api/index.mjs](api/index.mjs) |
+| Database prerequisites | [docs/supabase.md](docs/supabase.md) |
+| Card and administrator migration | [supabase/migrations](supabase/migrations) |
+| Environment template | [.env.example](.env.example) |
+| Browser scenarios | [tests/site.spec.ts](tests/site.spec.ts) |
+
+`npm run preview` previews the frontend build. Use `npm start` after building for the complete local site with its API. Before the first browser test run, install the Playwright browser with `npx playwright install chromium`.
