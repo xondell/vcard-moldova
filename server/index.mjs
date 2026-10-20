@@ -266,6 +266,10 @@ app.put("/api/profile", requireUser, async (req, res) => {
     return res.status(400).json({ error: "Некорректный профиль" });
   const previous = await profileFor(req.user.id);
   if (!previous) return res.status(404).json({ error: "Профиль не найден" });
+  if (profile.type !== previous.type)
+    return res
+      .status(400)
+      .json({ error: "Тип профиля нельзя изменить этим запросом" });
   await checked(
     db
       .from("profiles")
