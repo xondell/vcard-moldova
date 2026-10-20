@@ -1,14 +1,11 @@
-# Supabase integration handoff
+# Supabase implementation
 
-The current Preview is a deliberately labeled local-demo fallback because no Supabase credentials were supplied. Registration, login, profile editing, publish toggles, QR and vCard actions are demonstrable with browser persistence, but this local state is not a production authentication system.
+The application uses the existing VCard Moldova Supabase project, Supabase Auth accounts, `profiles`, `personal_profiles`, `business_profiles`, `physical_cards`, and `activation_codes` tables. The additive migration stores editable profile content in `profiles.data`, preserves existing child-table content, and permits short numeric card IDs alongside legacy `VC...` identifiers.
 
-## Production sequence
+The browser calls only same-origin `/api` endpoints. The Vercel function uses a server-only Supabase secret key. Account registration never accepts role or ownership assignments. Admin checks retrieve the current Auth user and inspect server-controlled `app_metadata.role` on every request. Password verification uses Supabase Auth, while the browser receives a separate opaque session cookie; its hash is stored in `vcard_sessions`. Logging out deletes the session immediately.
 
-1. Create a Supabase project and configure Auth email/password plus the Preview and production redirect URLs.
-2. Add `profiles`, `personal_profiles`, `business_profiles`, `physical_cards`, and `activation_codes` tables with UUID ownership, unique normalized slugs, card statuses (`UNASSIGNED`, `ACTIVE`, `DISABLED`), timestamps, and indexes.
-3. Enable Row Level Security. Owners may read/update only their own profile records. Public reads should use a safe published-profile view that excludes account metadata. Activation codes must never be publicly queryable.
-4. Implement activation as an atomic server-side transaction or Postgres function: verify a hashed single-use code, mark it used, assign the card to the authenticated profile, and return only the public card identifier.
-5. Add Supabase Storage buckets and ownership-scoped policies for personal avatars, business logos, and cover images. Validate MIME type and size server-side.
-6. Replace the local `localStorage` adapter in `src/main.tsx` with Supabase Auth and typed data access. Keep the UI error states and demo fixtures as fallback content only.
+`vcard_sessions` and `vcard_rate_limits` have RLS enabled and no public policies: direct browser access is intentionally denied. Admin card creation, code replacement, activation and rate limiting use transactional RPCs with `SECURITY INVOKER` and EXECUTE granted only to `service_role`. The RPCs are inaccessible using the public browser key. Activation locks the code/card, checks unused/unassigned/enabled state, and assigns both owner and profile atomically. Card auto-numbering is serialized with a transaction advisory lock.
 
-No secrets belong in source control. The service-role key must remain server-only and never enter a browser bundle. Payments, subscriptions, physical inventory and direct NFC tag writing are intentionally out of scope for this MVP.
+Public API responses expose only published profile content or card status. They never return code hashes, account passwords, session tokens or service keys. Deleting a physical card cascades its activation code through the existing foreign key. Database values and user input are rendered as React text; profile links are validated before use.
+
+The migration expects the base VCard schema already installed. It is not a replacement initialization script for an empty Supabase project. Database backup and recovery remain managed by Supabase. Existing legacy RPCs and media policies are preserved.

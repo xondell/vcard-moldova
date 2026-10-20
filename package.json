@@ -6,20 +6,28 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "start": "node --env-file-if-exists=.env server/index.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
     "@vitejs/plugin-react": "latest",
+    "express": "^5.3.0",
     "lucide-react": "latest",
     "qrcode": "latest",
     "react": "latest",
     "react-dom": "latest"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/qrcode": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "typescript": "latest",
     "vite": "latest"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
