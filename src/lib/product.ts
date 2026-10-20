@@ -1,3 +1,4 @@
+import { account } from './api'
 import QRCode from 'qrcode'
 
 export type Locale = 'ru' | 'ro'
@@ -93,24 +94,11 @@ export const demoBusiness: BusinessProfile = {
   ]
 }
 
-export const profileFromStorage = (): Profile => {
-  try {
-    const raw = localStorage.getItem('vcard_profile')
-    if (raw) return JSON.parse(raw) as Profile
-  } catch {
-    // Fall back to the safe demo record when storage is unavailable.
-  }
-  return demoPersonal
-}
-
-export const saveProfile = (profile: Profile) => {
-  localStorage.setItem('vcard_profile', JSON.stringify(profile))
-}
-
-export const hasDemoUser = () => localStorage.getItem('vcard_user') === 'demo'
+export const profileFromStorage = (): Profile => account?.profile || demoPersonal
+export const saveProfile = (profile: Profile) => { if (account) account.profile = profile }
 
 export const publicProfileUrl = (profile: Profile) => `${appUrl()}/p/${profile.slug}`
-export const cardUrl = (cardId = 'VC000123') => `${appUrl()}/c/${cardId}`
+export const cardUrl = (cardId = 'VC000123') => `${appUrl()}/${cardId}`
 
 export const normalizeSlug = (value: string) => value
   .toLowerCase()
