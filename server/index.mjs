@@ -11,7 +11,8 @@ const db = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
 });
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const secret = () => "VCARD-" + randomBytes(12).toString("hex").toUpperCase();
-const production = process.env.NODE_ENV === "production";
+const production =
+  process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
 const checked = async (query) => {
   const { data, error } = await query;
   if (error) throw error;
@@ -362,6 +363,18 @@ app.get("/api/admin/overview", async (req, res) => {
   const byId = new Map(users.map((u) => [u.id, u.email]));
   overview.stats.users = users.filter(
     (u) => u.app_metadata?.role !== "admin",
+  ).length;
+  const regularIds = new Set(
+    users.filter((u) => u.app_metadata?.role !== "admin").map((u) => u.id),
+  );
+  const activeProfiles = await checked(
+    db
+      .from("profiles")
+      .select("owner_id")
+      .gt("last_seen", new Date(Date.now() - 30 * 86400000).toISOString()),
+  );
+  overview.stats.activeUsers = activeProfiles.filter((p) =>
+    regularIds.has(p.owner_id),
   ).length;
   overview.cards = overview.cards.map((c) => ({
     ...c,
